@@ -5,9 +5,22 @@ export function buildExport() {
   return {
     exportedAt: new Date().toISOString(),
     mode: store.settings.mode,
-    prizes: store.prizes.map(({ id, name, awarded }) => ({ id, name, awarded })),
-    registrants: store.registrants.map(({ id, name, hasWon }) => ({ id, name, hasWon })),
-    winners: store.winners.map(({ personName, prizeName, at }) => ({ personName, prizeName, at })),
+    prizes: store.prizes.map(({ prize_id, name, awarded }) => ({ prize_id, name, awarded })),
+    registrants: store.registrants.map(({ registrant_id, name, hasWon }) => ({
+      registrant_id,
+      name,
+      hasWon,
+    })),
+    winners: store.winners.map(
+      ({ winner_id, registrant_id, registrant_name, prize_id, prize_name, at }) => ({
+        winner_id,
+        registrant_id,
+        registrant_name,
+        prize_id,
+        prize_name,
+        at,
+      })
+    ),
   };
 }
 

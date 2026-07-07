@@ -11,22 +11,24 @@
 </script>
 
 <div class="app">
-  <header class="topbar">
-    <div class="brand">
-      <span class="dot"></span>
-      <h1>Veent Roulette</h1>
-    </div>
-    <span class="tag">Raffle &amp; prize draw</span>
-  </header>
+  <section class="viewport">
+    <header class="topbar">
+      <div class="brand">
+        <span class="dot"></span>
+        <h1>Veent Roulette</h1>
+      </div>
+      <span class="tag">Raffle &amp; prize draw</span>
+    </header>
 
-  <main class="stage">
-    <div class="wheel-col">
-      <Wheel />
-    </div>
-    <div class="side-col">
-      <Sidebar />
-    </div>
-  </main>
+    <main class="stage">
+      <div class="wheel-col">
+        <Wheel />
+      </div>
+      <div class="side-col">
+        <Sidebar />
+      </div>
+    </main>
+  </section>
 
   <div class="data">
     <JsonPanels />
@@ -37,12 +39,21 @@
   .app {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 1.25rem;
+    padding: 0 1.25rem 1.25rem;
     display: flex;
     flex-direction: column;
     gap: 1.1rem;
   }
+  /* Topbar + stage fill exactly the screen height at startup. */
+  .viewport {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    padding-top: 1.25rem;
+  }
   .topbar {
+    flex: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -70,17 +81,22 @@
     font-size: 0.82rem;
   }
   .stage {
+    flex: 1;
+    min-height: 0;
     display: grid;
     grid-template-columns: 1fr 380px;
     gap: 1.1rem;
     align-items: stretch;
-    min-height: 560px;
   }
   .wheel-col,
   .side-col {
     min-width: 0;
+    min-height: 0;
   }
   @media (max-width: 900px) {
+    .viewport {
+      height: auto;
+    }
     .stage {
       grid-template-columns: 1fr;
     }

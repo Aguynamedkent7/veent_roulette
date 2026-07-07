@@ -60,8 +60,8 @@
         <span class="label">Prize to award this spin</span>
         <select class="field" bind:value={store.settings.selectedPrizeId}>
           <option value={null} disabled>Select a prize…</option>
-          {#each availablePrizes as p (p.id)}
-            <option value={p.id}>{p.name}</option>
+          {#each availablePrizes as p (p.prize_id)}
+            <option value={p.prize_id}>{p.name}</option>
           {/each}
         </select>
         {#if availablePrizes.length === 0}
@@ -71,10 +71,10 @@
     {:else}
       <div class="control">
         <span class="label">Person to receive this spin</span>
-        <select class="field" bind:value={store.settings.selectedPersonId}>
+        <select class="field" bind:value={store.settings.selectedRegistrantId}>
           <option value={null} disabled>Select a person…</option>
-          {#each availableRegistrants as r (r.id)}
-            <option value={r.id}>{r.name}</option>
+          {#each availableRegistrants as r (r.registrant_id)}
+            <option value={r.registrant_id}>{r.name}</option>
           {/each}
         </select>
         {#if availableRegistrants.length === 0}
@@ -89,6 +89,7 @@
       title="Prizes"
       placeholder="Add a prize…"
       items={store.prizes}
+      idKey="prize_id"
       onAdd={addPrize}
       onRemove={removePrize}
       badge={(p) => (p.awarded ? 'awarded' : '')}
@@ -98,6 +99,7 @@
       title="Registrants"
       placeholder="Add a person…"
       items={store.registrants}
+      idKey="registrant_id"
       onAdd={addRegistrant}
       onRemove={removeRegistrant}
       badge={(r) => (r.hasWon ? 'won' : '')}
@@ -115,9 +117,11 @@
     gap: 1.1rem;
     padding: 1.1rem;
     height: 100%;
-    overflow-y: auto;
+    min-height: 0;
+    overflow: hidden;
   }
   .controls-block {
+    flex: none;
     display: flex;
     flex-direction: column;
     gap: 0.9rem;
@@ -190,6 +194,7 @@
     min-height: 0;
   }
   .reset {
+    flex: none;
     color: var(--text-muted);
     font-size: 0.82rem;
   }

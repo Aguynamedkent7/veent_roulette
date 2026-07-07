@@ -1,5 +1,6 @@
 <script>
   import { store, wheel, recordWinner } from './store.svelte.js';
+  import Confetti from './Confetti.svelte';
 
   const PALETTE = ['#d90c2a', '#ff2357', '#ff0aad', '#f59e0b', '#fdffa4', '#e1f3fe'];
   const SIZE = 460;
@@ -12,15 +13,19 @@
 
   const items = $derived(wheel.items);
   const mode = $derived(store.settings.mode);
+  // Which id field the wheel items carry depends on the mode.
+  const idKey = $derived(mode === 'people' ? 'registrant_id' : 'prize_id');
 
   // The counterpart the organizer must pick before spinning.
   const needsPrize = $derived(mode === 'people');
   const counterpartReady = $derived(
     needsPrize
       ? store.settings.selectedPrizeId != null &&
-          store.prizes.some((p) => p.id === store.settings.selectedPrizeId && !p.awarded)
-      : store.settings.selectedPersonId != null &&
-          store.registrants.some((r) => r.id === store.settings.selectedPersonId && !r.hasWon)
+          store.prizes.some((p) => p.prize_id === store.settings.selectedPrizeId && !p.awarded)
+      : store.settings.selectedRegistrantId != null &&
+          store.registrants.some(
+            (r) => r.registrant_id === store.settings.selectedRegistrantId && !r.hasWon
+          )
   );
 
   const canSpin = $derived(items.length > 0 && counterpartReady && !spinning);
@@ -89,22 +94,22 @@
     const landed = items[pendingIndex];
     if (!landed) return;
 
-    let personId, prizeId;
+    let registrant_id, prize_id;
     if (mode === 'people') {
-      personId = landed.id;
-      prizeId = store.settings.selectedPrizeId;
+      registrant_id = landed.registrant_id;
+      prize_id = store.settings.selectedPrizeId;
     } else {
-      prizeId = landed.id;
-      personId = store.settings.selectedPersonId;
+      prize_id = landed.prize_id;
+      registrant_id = store.settings.selectedRegistrantId;
     }
 
-    const entry = recordWinner({ personId, prizeId });
+    const entry = recordWinner({ registrant_id, prize_id });
     if (entry) {
       lastWinner = entry;
       banner = true;
       // Clear the used counterpart selection so the next draw needs a fresh pick.
       if (mode === 'people') store.settings.selectedPrizeId = null;
-      else store.settings.selectedPersonId = null;
+      else store.settings.selectedRegistrantId = null;
     }
   }
 </script>
@@ -124,7 +129,7 @@
         style="transform: rotate({rotation}deg)"
         ontransitionend={onTransitionEnd}
       >
-        {#each items as item, i (item.id)}
+        {#each items as item, i (item[idKey])}
           {@const t = labelTransform(i, items.length)}
           <g>
             <path
@@ -158,9 +163,19 @@
   </div>
 
   {#if banner && lastWinner}
-    <div class="winner-banner" role="status">
-      🎉 <strong>{lastWinner.personName}</strong> won <strong>{lastWinner.prizeName}</strong>
-      <button class="dismiss" onclick={() => (banner = false)} aria-label="Dismiss">×</button>
+    <Confetti />
+    <div class="winner-overlay" role="dialog" aria-modal="true" aria-label="Winner">
+      <div class="winner-modal card">
+        <button class="modal-close" onclick={() => (banner = false)} aria-label="Close">×</button>
+        <p class="winner-eyebrow">Winner</p>
+        <p class="winner-name">{lastWinner.registrant_name}</p>
+        <div class="winner-divider"></div>
+        <p class="winner-prize-label">Prize</p>
+        <p class="winner-prize">{lastWinner.prize_name}</p>
+        <button class="btn btn-primary winner-continue" onclick={() => (banner = false)}>
+          Continue
+        </button>
+      </div>
     </div>
   {/if}
 </div>
@@ -259,31 +274,100 @@
     min-height: 1.1em;
   }
 
-  .winner-banner {
-    position: absolute;
-    bottom: 1rem;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--surface-2);
+  .winner-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(4px);
+    animation: overlay-in 0.18s ease-out;
+  }
+  @keyframes overlay-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .winner-modal {
+    position: relative;
+    width: min(560px, 100%);
+    text-align: center;
+    padding: 3rem 2.5rem 2.5rem;
+    background: var(--surface);
     border: 1px solid var(--border-input-hover);
-    border-radius: 999px;
-    padding: 0.6rem 1.1rem 0.6rem 1.2rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.95rem;
-    box-shadow: var(--shadow);
-    white-space: nowrap;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65);
+    animation: modal-in 0.28s cubic-bezier(0.2, 0.8, 0.25, 1);
   }
-  .winner-banner strong {
-    color: var(--accent);
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px) scale(0.94);
+    }
   }
-  .dismiss {
+
+  .modal-close {
+    position: absolute;
+    top: 0.9rem;
+    right: 1rem;
     background: transparent;
     border: none;
     color: var(--text-muted);
-    font-size: 1.2rem;
+    font-size: 1.6rem;
     line-height: 1;
-    padding: 0 0.2rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-sm);
+    transition: color var(--transition);
+  }
+  .modal-close:hover {
+    color: var(--text);
+  }
+
+  .winner-eyebrow {
+    margin: 0 0 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary);
+  }
+  .winner-name {
+    margin: 0;
+    font-size: clamp(2.2rem, 6vw, 3.4rem);
+    font-weight: 700;
+    line-height: 1.05;
+    color: var(--text);
+    word-break: break-word;
+  }
+  .winner-divider {
+    width: 64px;
+    height: 3px;
+    background: var(--primary);
+    border-radius: 999px;
+    margin: 1.6rem auto;
+  }
+  .winner-prize-label {
+    margin: 0 0 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+  .winner-prize {
+    margin: 0;
+    font-size: clamp(1.4rem, 3.5vw, 2rem);
+    font-weight: 600;
+    color: var(--accent);
+    word-break: break-word;
+  }
+  .winner-continue {
+    margin-top: 2rem;
+    padding: 0.75rem 2.8rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
   }
 </style>

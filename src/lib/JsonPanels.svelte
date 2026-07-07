@@ -1,5 +1,5 @@
 <script>
-  import { store, loadState } from './store.svelte.js';
+  import { store, loadState, clearData } from './store.svelte.js';
   import { buildExport, downloadJson, exportFilename, parseImport } from './exportUtils.js';
 
   let importError = $state('');
@@ -14,6 +14,12 @@
 
   function exportAll() {
     downloadJson(buildExport(), exportFilename());
+  }
+
+  function confirmClear() {
+    if (confirm('Clear all data (prizes, registrants, winners)? This cannot be undone.')) {
+      clearData();
+    }
   }
 
   async function copyPanel(key, data) {
@@ -46,6 +52,7 @@
     <h2>Data</h2>
     <div class="bar-actions">
       {#if importError}<span class="err">{importError}</span>{/if}
+      <button class="btn danger" onclick={confirmClear}>Clear data</button>
       <button class="btn" onclick={() => fileInput.click()}>Import JSON</button>
       <button class="btn btn-primary" onclick={exportAll}>Export JSON</button>
       <input
@@ -99,6 +106,14 @@
   .err {
     color: var(--destructive);
     font-size: 0.8rem;
+  }
+  .danger {
+    color: var(--text-muted);
+  }
+  .danger:hover {
+    color: var(--primary-foreground);
+    background: var(--destructive);
+    border-color: var(--destructive);
   }
   .grid {
     display: grid;

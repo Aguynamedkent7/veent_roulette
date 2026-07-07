@@ -1,8 +1,8 @@
 <script>
   // Reusable "add + list with delete" used for both prizes and registrants.
-  // Props: title, placeholder, items, onAdd(name), onRemove(id),
+  // Props: title, placeholder, items, idKey, onAdd(name), onRemove(id),
   //        badge(item) -> optional status label, muted(item) -> bool (dim consumed rows)
-  let { title, placeholder, items, onAdd, onRemove, badge, muted } = $props();
+  let { title, placeholder, items, idKey, onAdd, onRemove, badge, muted } = $props();
 
   let value = $state('');
 
@@ -28,13 +28,13 @@
     <p class="empty">Nothing yet.</p>
   {:else}
     <ul class="list">
-      {#each items as item (item.id)}
+      {#each items as item (item[idKey])}
         <li class="row" class:muted={muted?.(item)}>
           <span class="name" title={item.name}>{item.name}</span>
           {#if badge?.(item)}
             <span class="badge">{badge(item)}</span>
           {/if}
-          <button class="del" onclick={() => onRemove(item.id)} aria-label="Remove {item.name}">×</button>
+          <button class="del" onclick={() => onRemove(item[idKey])} aria-label="Remove {item.name}">×</button>
         </li>
       {/each}
     </ul>
@@ -43,10 +43,15 @@
 
 <style>
   .entry {
+    flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
     gap: 0.55rem;
+  }
+  .entry-head,
+  .add-row {
+    flex: none;
   }
   .entry-head {
     display: flex;
@@ -90,8 +95,9 @@
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    max-height: 26vh;
   }
   .row {
     display: flex;
