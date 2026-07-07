@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from 'svelte';
   import { store, wheel, recordWinner } from './store.svelte.js';
   import Confetti from './Confetti.svelte';
 
@@ -10,6 +11,29 @@
   let spinning = $state(false);
   let lastWinner = $state(null);
   let banner = $state(false);
+
+  // Gentle continuous idle rotation while not actively drawing.
+  const IDLE_SPEED = 8; // degrees per second
+  let idleRaf = null;
+  let lastTs = null;
+
+  function idleTick(ts) {
+    if (spinning) return; // draw spin owns the wheel; don't reschedule
+    if (lastTs != null) rotation += (IDLE_SPEED * (ts - lastTs)) / 1000;
+    lastTs = ts;
+    idleRaf = requestAnimationFrame(idleTick);
+  }
+
+  function startIdle() {
+    lastTs = null;
+    cancelAnimationFrame(idleRaf);
+    idleRaf = requestAnimationFrame(idleTick);
+  }
+
+  onMount(() => {
+    startIdle();
+    return () => cancelAnimationFrame(idleRaf);
+  });
 
   const items = $derived(wheel.items);
   const mode = $derived(store.settings.mode);
@@ -70,6 +94,7 @@
     if (!canSpin) return;
     spinning = true;
     banner = false;
+    cancelAnimationFrame(idleRaf); // hand the wheel over to the draw spin
 
     const n = items.length;
     const targetIndex = Math.floor(Math.random() * n);
@@ -91,26 +116,29 @@
   function onTransitionEnd() {
     if (!spinning) return;
     spinning = false;
+
     const landed = items[pendingIndex];
-    if (!landed) return;
+    if (landed) {
+      let registrant_id, prize_id;
+      if (mode === 'people') {
+        registrant_id = landed.registrant_id;
+        prize_id = store.settings.selectedPrizeId;
+      } else {
+        prize_id = landed.prize_id;
+        registrant_id = store.settings.selectedRegistrantId;
+      }
 
-    let registrant_id, prize_id;
-    if (mode === 'people') {
-      registrant_id = landed.registrant_id;
-      prize_id = store.settings.selectedPrizeId;
-    } else {
-      prize_id = landed.prize_id;
-      registrant_id = store.settings.selectedRegistrantId;
+      const entry = recordWinner({ registrant_id, prize_id });
+      if (entry) {
+        lastWinner = entry;
+        banner = true;
+        // Clear the used counterpart selection so the next draw needs a fresh pick.
+        if (mode === 'people') store.settings.selectedPrizeId = null;
+        else store.settings.selectedRegistrantId = null;
+      }
     }
 
-    const entry = recordWinner({ registrant_id, prize_id });
-    if (entry) {
-      lastWinner = entry;
-      banner = true;
-      // Clear the used counterpart selection so the next draw needs a fresh pick.
-      if (mode === 'people') store.settings.selectedPrizeId = null;
-      else store.settings.selectedRegistrantId = null;
-    }
+    startIdle(); // resume the gentle idle spin from where the draw stopped
   }
 </script>
 
@@ -119,12 +147,13 @@
     <div class="pointer" aria-hidden="true"></div>
 
     {#if items.length === 0}
-      <div class="empty-wheel">
+      <div class="empty-wheel" style="transform: rotate({rotation}deg)">
         <span>No items on the wheel</span>
       </div>
     {:else}
       <svg
         class="wheel"
+        class:is-spinning={spinning}
         viewBox="0 0 {SIZE} {SIZE}"
         style="transform: rotate({rotation}deg)"
         ontransitionend={onTransitionEnd}
@@ -202,9 +231,13 @@
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    transition: transform 5.2s cubic-bezier(0.17, 0.67, 0.32, 1);
+    transition: none;
     box-shadow: 0 0 0 6px var(--surface-2), 0 0 0 8px var(--border-strong), var(--shadow);
     display: block;
+  }
+  /* Eased transition only while a draw is in progress; idle spin is frame-driven. */
+  .wheel.is-spinning {
+    transition: transform 5.2s cubic-bezier(0.17, 0.67, 0.32, 1);
   }
 
   .seg-label {
